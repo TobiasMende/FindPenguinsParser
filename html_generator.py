@@ -1,11 +1,9 @@
 import json
 import os
 
-import sys
 from yattag import Doc
 
 from generator_info import generator_info_from_command_line_args
-from post import STORAGE_PATH, TRIP_TITLE
 
 doc, tag, text = Doc().tagtext()
 
@@ -19,9 +17,10 @@ def get_post(article_dir):
         post = json.loads(data_file.read())
     return post
 
-def add_days():
-    for day in subdirs(STORAGE_PATH):
-        day_dir = os.path.join(STORAGE_PATH, day)
+
+def add_days(storage_path):
+    for day in subdirs(storage_path):
+        day_dir = os.path.join(storage_path, day)
         day_segments = day.split('-')
         formatted_day = '{}.{}.{}'.format(day_segments[2], day_segments[1], day_segments[0])
         first_post = get_post(os.path.join(day_dir, next(subdirs(day_dir))))
@@ -69,7 +68,7 @@ if __name__ == '__main__':
             with tag('div', klass='container-fluid'):
                 with tag('h1'):
                     text(info.trip_title)
-                add_days()
+                add_days(info.storage_path)
 
     with open(os.path.join(info.storage_path, 'index.html'), 'w') as file:
         file.write(doc.getvalue())

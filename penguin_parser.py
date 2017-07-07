@@ -1,12 +1,11 @@
-import datetime
 import json
 import os
-import sys
 import urllib
 
 from lxml import html
 import requests
 
+from parser_info import parser_info_from_command_line_args
 from post import *
 
 
@@ -34,7 +33,8 @@ def extract_post(item):
     post.bookmark = ' '.join(item.xpath(content_container_path + '/div[@class="bookmark"]/span/text()'))
     post.title = item.xpath(content_container_path + '/div[@class="title"]/a/h2/text()')[0]
     post.date = item.xpath(content_container_path + '/div[@class="title"]/span[@class="date"]/span/@content')[0]
-    post.text = ''.join(item.xpath(content_container_path + '/div[@class="text"]//p//text()')).strip().rsplit('Read more')[0]
+    post.text = \
+        ''.join(item.xpath(content_container_path + '/div[@class="text"]//p//text()')).strip().rsplit('Read more')[0]
     post.images = ['https:' + elem for elem in item.xpath(image_container_path + '//img/../@data-url')]
     return post
 
@@ -52,8 +52,8 @@ def store_image(image, storage_info):
     return 'images/{}'.format(image_name)
 
 
-def download(post):
-    directory = '{}/{}/{}'.format(STORAGE_PATH, post.date, post.id)
+def download(post, storage_path):
+    directory = '{}/{}/{}'.format(storage_path, post.date, post.id)
     create_dirs(directory)
     print('Download {} to {}'.format(post, directory))
 
@@ -71,25 +71,21 @@ def download(post):
         json.dump(post.__dict__, file)
 
 
-def extract_posts(tree):
+def extract_posts(tree, storage_path):
     raw_posts = tree.xpath('//article[@itemtype="http://schema.org/BlogPosting"]')
-    return [download(extract_post(item)) for item in raw_posts]
+    return [download(extract_post(item), storage_path) for item in raw_posts]
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('First Argument "TRIP" is missing. Example: marathon56/trip/tour-de-france-2017')
-        exit(1)
-
-    trip = sys.argv[1]
+    info = parser_info_from_command_line_args()
     base = 'https://findpenguins.com'
-    subpage = '/{}?page=1'.format(trip)
+    subpage = '/{}?page=1'.format(info.trip)
 
     tree = get_tree(base, subpage)
     posts = []
 
     while tree is not None:
-        posts.extend(extract_posts(tree))
+        posts.extend(extract_posts(tree, info.storage_path))
         tree = next_page(base, tree)
 
     print(len(posts))

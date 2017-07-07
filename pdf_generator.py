@@ -3,17 +3,15 @@ import os
 from random import shuffle
 
 from reportlab.lib import styles
-from reportlab.lib.colors import black, toColor
+from reportlab.lib.colors import black
 from reportlab.lib.enums import TA_JUSTIFY
-from reportlab.lib.pagesizes import letter, A4, landscape
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreakIfNotEmpty, CondPageBreak, KeepTogether, Table, PageTemplate, Frame, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreakIfNotEmpty, KeepTogether, Table, Frame, PageBreak
 from reportlab.platypus.para import Paragraph
 
 from generator_info import generator_info_from_command_line_args
-from post import STORAGE_PATH, TRIP_TITLE
-
 
 styles = getSampleStyleSheet()
 styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
@@ -21,15 +19,17 @@ styles['Normal'].backColor = black
 
 Story = []
 
+
 def get_post(article_dir):
     with open(os.path.join(article_dir, 'meta.json'), encoding='utf-8') as data_file:
         post = json.loads(data_file.read())
     return post
 
-def get_all_images():
+
+def get_all_images(storage_path):
     images = []
-    for day in subdirs(STORAGE_PATH):
-        day_dir = os.path.join(STORAGE_PATH, day)
+    for day in subdirs(storage_path):
+        day_dir = os.path.join(storage_path, day)
         for article in subdirs(day_dir):
             article_dir = os.path.join(day_dir, article)
             with open(os.path.join(article_dir, 'meta.json'), encoding='utf-8') as data_file:
@@ -44,9 +44,9 @@ def subdirs(directory):
     return filter(lambda x: os.path.isdir(os.path.join(directory, x)), os.listdir(directory))
 
 
-def add_days():
-    for day in subdirs(STORAGE_PATH):
-        day_dir = os.path.join(STORAGE_PATH, day)
+def add_days(storage_path):
+    for day in subdirs(storage_path):
+        day_dir = os.path.join(storage_path, day)
         day_segments = day.split('-')
         formatted_day = '{}.{}.{}'.format(day_segments[2], day_segments[1], day_segments[0])
         first_post = get_post(os.path.join(day_dir, next(subdirs(day_dir))))
@@ -55,6 +55,7 @@ def add_days():
         Story.append(day_header)
         add_articles(day_dir)
         Story.append(PageBreakIfNotEmpty())
+
 
 def add_articles(day_dir):
     for article in subdirs(day_dir):
@@ -93,7 +94,7 @@ if __name__ == '__main__':
 
     title = Paragraph('{}'.format(info.trip_title), styles["Heading1"])
     Story.append(title)
-    images = get_all_images()
+    images = get_all_images(info.storage_path)
     shuffle(images)
     table_data = []
     for i in range(0, 10):
@@ -103,6 +104,6 @@ if __name__ == '__main__':
         table_data.append(row)
     Story.append(Table(table_data, 1.75*cm, 1.75*cm))
     Story.append(PageBreakIfNotEmpty())
-    add_days()
+    add_days(info.storage_path)
 
     doc.build(Story)
