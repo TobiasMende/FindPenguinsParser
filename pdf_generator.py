@@ -1,5 +1,6 @@
 import json
 import os
+from math import floor
 from random import shuffle
 
 from reportlab.lib import styles
@@ -8,7 +9,8 @@ from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreakIfNotEmpty, KeepTogether, Table, Frame, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreakIfNotEmpty, KeepTogether, Table, \
+    Frame, PageBreak
 from reportlab.platypus.para import Paragraph
 
 from generator_info import generator_info_from_command_line_args
@@ -41,7 +43,7 @@ def get_all_images(storage_path):
 
 
 def subdirs(directory):
-    return filter(lambda x: os.path.isdir(os.path.join(directory, x)), os.listdir(directory))
+    return filter(lambda x: os.path.isdir(os.path.join(directory, x)), sorted(os.listdir(directory)))
 
 
 def add_days(storage_path):
@@ -50,7 +52,8 @@ def add_days(storage_path):
         day_segments = day.split('-')
         formatted_day = '{}.{}.{}'.format(day_segments[2], day_segments[1], day_segments[0])
         first_post = get_post(os.path.join(day_dir, next(subdirs(day_dir))))
-        day_header = Paragraph('{}\t({})'.format(formatted_day, first_post['bookmark'].replace('Day', 'Tag')), styles["Heading2"])
+        day_header = Paragraph('{}\t({})'.format(formatted_day, first_post['bookmark'].replace('Day', 'Tag')),
+                               styles["Heading2"])
         day_header.keepWithNext = True
         Story.append(day_header)
         add_articles(day_dir)
@@ -95,14 +98,18 @@ if __name__ == '__main__':
     title = Paragraph('{}'.format(info.trip_title), styles["Heading1"])
     Story.append(title)
     images = get_all_images(info.storage_path)
+    print("Images: {}".format(len(images)))
     shuffle(images)
     table_data = []
-    for i in range(0, 10):
+    rows = 10
+    cols = int(len(images) / rows)
+    for i in range(0, rows):
         row = []
-        for j in range(0, 24):
-            row.append(Image(images[i*25+j], 1.75*cm, 1.75*cm))
+        for j in range(0, cols):
+            image_index = i * cols + j
+            row.append(Image(images[image_index], 1.75 * cm, 1.75 * cm))
         table_data.append(row)
-    Story.append(Table(table_data, 1.75*cm, 1.75*cm))
+    Story.append(Table(table_data, 1.75 * cm, 1.75 * cm))
     Story.append(PageBreakIfNotEmpty())
     add_days(info.storage_path)
 
