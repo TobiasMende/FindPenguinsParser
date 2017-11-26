@@ -1,7 +1,9 @@
 import json
 import os
+import re
 import urllib
 
+import datetime
 from lxml import html
 import requests
 
@@ -33,10 +35,19 @@ def extract_post(item):
     post.bookmark = ' '.join(item.xpath(content_container_path + '/div[@class="bookmark"]/span/text()'))
     post.title = item.xpath(content_container_path + '/div[@class="title"]/a/h2/text()')[0]
     post.date = item.xpath(content_container_path + '/div[@class="title"]/span[@class="date"]/span/@content')[0]
+    post.time = extract_time(content_container_path, item)
     post.text = \
         ''.join(item.xpath(content_container_path + '/div[@class="text"]//p//text()')).strip().rsplit('Read more')[0]
     post.images = ['https:' + elem for elem in item.xpath(image_container_path + '//img/../@data-url')]
     return post
+
+
+def extract_time(content_container_path, item):
+    time_string = item.xpath(content_container_path + '/div[@class="menuBox"]/aside[@class="info"]/span[3]/text()')[0]
+    time_matches = re.search('.*at ([\w:]*).*', time_string)
+    date_time = datetime.datetime.strptime(time_matches[1], '%I:%M%p') if ':' in time_matches[
+        1] else datetime.datetime.strptime(time_matches[1], '%I%p')
+    return date_time.strftime('%H-%M')
 
 
 def create_dirs(directory):
@@ -53,7 +64,7 @@ def store_image(image, storage_info):
 
 
 def download(post, storage_path):
-    directory = '{}/{}/{}'.format(storage_path, post.date, post.id)
+    directory = '{}/{}/{}'.format(storage_path, post.date, post.time)
     create_dirs(directory)
     print('Download {} to {}'.format(post, directory))
 
